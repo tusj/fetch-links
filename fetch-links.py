@@ -21,22 +21,26 @@ maxParallelRequests = 24
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
-parser.add_argument("include", help="List include patterns here\nExample: include pdf, doc and everything which contains hello in the file name: .*\.pdf .*\.doc .*hello.*")
+parser.add_argument("-i", "--include", help="List include patterns here\nExample: include pdf and doc: \"pdf doc\"")
+parser.add_argument("-r", "--regex", help="Specify include pattern as regular expression according to Python syntax\nExample: include everything which contains hello: \".*hello.*\"", action="store_true")
 parser.add_argument("-d", "--directory", help="Specify a directory to store the links in")
 parser.add_argument("-v", "--verbose", help="Increase program output", action="store_true")
 parser.add_argument("-l", "--list", help="Print out a list of the URL's found", action="store_true")
-parser.add_argument("--nodownload", help="Skip Downloading, implies --list option", action="store_true")
+parser.add_argument("-n", "--nodownload", help="Skip Downloading, implies --list option", action="store_true")
 
 args = parser.parse_args()
 
-t = args.include.split(" ")
-tt = [ "(" + ti + ")" for ti in t ]
-restring = ".*\." + "|".join(tt)
+restring = ".+\..+"
+if args.include:
+	t = args.include.split(" ")
+	restring = ".+\.(" + "|".join(t) + ")"
+
+print restring
 fileTypeFilter = re.compile(restring)
 
 if not args.url.startswith("http://"):
 	print "error: The URL given needs to be complete"
-	os.exit(1)
+	sys.exit(1)
 
 def makedir(dirname):
 	if not os.path.exists(dirname):
@@ -59,9 +63,12 @@ soup = BeautifulSoup(html_page)
 links = soup.findAll(name='a', attrs={'href': fileTypeFilter})
 
 def fetchLink(link):
-	urllib.urlretrieve(link.get('href'), os.path.basename(link.get('href')))
+	l = link.get('href')
+	if l == os.path.basename(l):
+		l = args.url
+	urllib.urlretrieve(l, os.path.basename(link.get('href')))
 
-if args.nodownload or args.list:
+if args.nodownload or args.list or args.verbose:
 	for l in links:
 		print l.get('href')
 	if args.nodownload:
@@ -82,7 +89,7 @@ if args.verbose:
 	fish = ProgressFish(total=n)
 	print
 	for i, res in enumerate(results):
-		fish.animate(amount=i)
+		fish.animate(amount=i+1)
 
 	if not args.directory:
 		print 'fetched {} links into directory {}\n'.format(n, dirname)
