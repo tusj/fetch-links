@@ -22,6 +22,7 @@ maxParallelRequests = 24
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
 parser.add_argument("include", help="list include patterns here\nExample: include pdf: .*\.pdf")
+parser.add_argument("-d", "--directory", help="specify a directory to store the links in")
 args = parser.parse_args()
 
 t = args.include.split(" ")
@@ -29,13 +30,22 @@ tt = [ "(" + ti + ")" for ti in t ]
 restring = "|".join(tt)
 regexObj = re.compile(restring)
 
-dirname = os.path.basename(args.url.strip('/'))
-if not os.path.exists(dirname):
-	os.mkdir(dirname)
-else:
-	dirname = args.url.strip('http://')
+def makedir(dirname):
 	if not os.path.exists(dirname):
+		print "made dir", dirname
 		os.makedirs(dirname)
+		return True
+
+dirname = ""
+if args.directory:
+	print "directory specified: ", args.directory
+	dirname = args.directory
+	makedir(dirname)
+else:
+	dirname = os.path.basename(args.url.strip('/'))
+	if not makedir(dirname):
+		dirname = args.url.strip('http://')
+		makedir(dirname)
 
 os.chdir(dirname)
 html_page = urllib2.urlopen(args.url)
@@ -66,5 +76,6 @@ for i, res in enumerate(results):
 	fish.animate(amount=i)
 
 
-print 'fetched {} links into directory {}\n'.format(n, dirname)
+if not args.directory:
+	print 'fetched {} links into directory {}\n'.format(n, dirname)
 print 'time used: {} seconds'.format(round(time.time() - tic, 2))
