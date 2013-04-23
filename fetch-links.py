@@ -24,6 +24,9 @@ parser.add_argument("url", help="Fetches all links from url given")
 parser.add_argument("include", help="list include patterns here\nExample: include pdf: .*\.pdf")
 parser.add_argument("-d", "--directory", help="specify a directory to store the links in")
 parser.add_argument("-v", "--verbose", help="Increase program output", action="store_true")
+parser.add_argument("-l", "--list", help="Print out a list of the URL's found", action="store_true")
+parser.add_argument("--nodownload", help="Skip Downloading, implies --list option", action="store_true")
+
 args = parser.parse_args()
 
 t = args.include.split(" ")
@@ -34,12 +37,6 @@ fileTypeFilter = re.compile(restring)
 if not args.url.startswith("http://"):
 	print "error: The URL given needs to be complete"
 	os.exit(1)
-
-def vPrint(*p):
-	if args.verbose:
-		for i in p:
-			print i,
-		print
 
 def makedir(dirname):
 	if not os.path.exists(dirname):
@@ -64,6 +61,13 @@ links = soup.findAll(name='a', attrs={'href': fileTypeFilter})
 def fetchLink(link):
 	urllib.urlretrieve(link.get('href'), os.path.basename(link.get('href')))
 
+if args.nodownload or args.list:
+	for l in links:
+		print l.get('href')
+	if args.nodownload:
+		sys.exit(0)
+
+
 tic = time.time()
 n = len(links)
 nSize = len(str(n))
@@ -72,15 +76,11 @@ results = pprocess.Map(limit=min(n, maxParallelRequests))
 fetchParallel = results.manage(pprocess.MakeParallel(fetchLink))
 
 for link in links:
-	l = link.get('href')
-	#sys.stdout.write("\n{}: of {}:\t{}\r\r\r".format(str(i).zfill(nSize), n, os.path.basename(link.get('href'))))
-	#sys.stdout.flush()
-	if str(l)[-1] == '/':
-		continue
 	fetchParallel(link)
 
 if args.verbose:
 	fish = ProgressFish(total=n)
+	print
 	for i, res in enumerate(results):
 		fish.animate(amount=i)
 
