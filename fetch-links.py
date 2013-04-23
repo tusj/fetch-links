@@ -23,22 +23,31 @@ parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
 parser.add_argument("include", help="list include patterns here\nExample: include pdf: .*\.pdf")
 parser.add_argument("-d", "--directory", help="specify a directory to store the links in")
+parser.add_argument("-v", "--verbose", help="Increase program output", action="store_true")
 args = parser.parse_args()
 
 t = args.include.split(" ")
 tt = [ "(" + ti + ")" for ti in t ]
-restring = "|".join(tt)
-regexObj = re.compile(restring)
+restring = ".*\." + "|".join(tt)
+fileTypeFilter = re.compile(restring)
+
+if not args.url.startswith("http://"):
+	print "error: The URL given needs to be complete"
+	os.exit(1)
+
+def vPrint(*p):
+	if args.verbose:
+		for i in p:
+			print i,
+		print
 
 def makedir(dirname):
 	if not os.path.exists(dirname):
-		print "made dir", dirname
 		os.makedirs(dirname)
 		return True
 
 dirname = ""
 if args.directory:
-	print "directory specified: ", args.directory
 	dirname = args.directory
 	makedir(dirname)
 else:
@@ -50,7 +59,7 @@ else:
 os.chdir(dirname)
 html_page = urllib2.urlopen(args.url)
 soup = BeautifulSoup(html_page)
-links = soup.findAll(name='a', attrs={'href': regexObj})
+links = soup.findAll(name='a', attrs={'href': fileTypeFilter})
 
 def fetchLink(link):
 	urllib.urlretrieve(link.get('href'), os.path.basename(link.get('href')))
@@ -70,12 +79,11 @@ for link in links:
 		continue
 	fetchParallel(link)
 
+if args.verbose:
+	fish = ProgressFish(total=n)
+	for i, res in enumerate(results):
+		fish.animate(amount=i)
 
-fish = ProgressFish(total=n)
-for i, res in enumerate(results):
-	fish.animate(amount=i)
-
-
-if not args.directory:
-	print 'fetched {} links into directory {}\n'.format(n, dirname)
-print 'time used: {} seconds'.format(round(time.time() - tic, 2))
+	if not args.directory:
+		print 'fetched {} links into directory {}\n'.format(n, dirname)
+	print 'time used: {} seconds'.format(round(time.time() - tic, 2))
