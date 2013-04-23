@@ -14,6 +14,7 @@ import pprocess
 import time
 import argparse
 import re
+from fish import ProgressFish
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
@@ -43,20 +44,23 @@ links = soup.findAll(name='a', attrs={'href': regexObj})
 def fetchLink(link):
 	urllib.urlretrieve(link.get('href'), os.path.basename(link.get('href')))
 
-i = 1
+i = 0
 
 tic = time.time()
-print 'fetching links ...\n'
 n = len(links)
 nSize = len(str(n))
+fish = ProgressFish(total=n)
+
 for link in links:
+	i += 1
+	fish.animate(amount=i)
 	l = link.get('href')
+	#sys.stdout.write("\n{}: of {}:\t{}\r\r\r".format(str(i).zfill(nSize), n, os.path.basename(link.get('href'))))
+	#sys.stdout.flush()
 	if str(l)[-1] == '/':
 		continue
-	print '{}: of {}:\t{}'.format(str(i).zfill(nSize), n, os.path.basename(link.get('href')))
 	fetchLink(link)
-	i += 1
 
-print '\nfetched {} links into directory {}\n\n'.format(n, dirname)
-print 'time used: {} seconds'.format(time.time() - tic)
+print 'fetched {} links into directory {}\n'.format(n, dirname)
+print 'time used: {} seconds'.format(round(time.time() - tic, 2))
 
