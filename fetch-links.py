@@ -16,6 +16,9 @@ import argparse
 import re
 from fish import ProgressFish
 
+maxParallelRequests = 24
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
 parser.add_argument("include", help="list include patterns here\nExample: include pdf: .*\.pdf")
@@ -30,7 +33,7 @@ dirname = os.path.basename(args.url.strip('/'))
 if not os.path.exists(dirname):
 	os.mkdir(dirname)
 else:
-	dirname = args.url
+	dirname = args.url.strip('http://')
 	if not os.path.exists(dirname):
 		os.makedirs(dirname)
 
@@ -42,18 +45,14 @@ links = soup.findAll(name='a', attrs={'href': regexObj})
 def fetchLink(link):
 	urllib.urlretrieve(link.get('href'), os.path.basename(link.get('href')))
 
-i = 0
-
 tic = time.time()
 n = len(links)
 nSize = len(str(n))
-fish = ProgressFish(total=n)
 
+results = pprocess.Map(limit=min(n, maxParallelRequests))
 fetchParallel = results.manage(pprocess.MakeParallel(fetchLink))
 
 for link in links:
-	i += 1
-	fish.animate(amount=i)
 	l = link.get('href')
 	#sys.stdout.write("\n{}: of {}:\t{}\r\r\r".format(str(i).zfill(nSize), n, os.path.basename(link.get('href'))))
 	#sys.stdout.flush()
@@ -62,9 +61,9 @@ for link in links:
 	fetchParallel(link)
 
 
-results = pprocess.Map(limit=limit)
-for res in results:
-	print res
+fish = ProgressFish(total=n)
+for i, res in enumerate(results):
+	fish.animate(amount=i)
 
 
 print 'fetched {} links into directory {}\n'.format(n, dirname)
