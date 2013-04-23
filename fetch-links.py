@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # Fetches data files from given link as argument.
-# TODO: Currently skips subdirectories.
+# TODO: Add test for url check.
+# Currently skips subdirectories.
+
 from BeautifulSoup import BeautifulSoup
 import urllib
 import urllib2
@@ -39,24 +41,22 @@ soup = BeautifulSoup(html_page)
 links = soup.findAll(name='a', attrs={'href': regexObj})
 
 def fetchLink(link):
-	print args.url
-	print link.get('href')
 	urllib.urlretrieve(link.get('href'), os.path.basename(link.get('href')))
 
-limit = len(links)
-i = 0
-n = len(links)
+i = 1
 
 tic = time.time()
+print 'fetching links ...\n'
+n = len(links)
+nSize = len(str(n))
 for link in links:
 	l = link.get('href')
 	if str(l)[-1] == '/':
 		continue
-	print "fetching #", i, " of ", n, ": ", os.path.basename(link.get('href'))
+	print '{}: of {}:\t{}'.format(str(i).zfill(nSize), n, os.path.basename(link.get('href')))
 	fetchLink(link)
 	i += 1
 
-
-print "fetched ", len(links), " into directory ", dirname
-print "time used:", time.time() - tic, "seconds"
+print '\nfetched {} links into directory {}\n\n'.format(n, dirname)
+print 'time used: {} seconds'.format(time.time() - tic)
 
