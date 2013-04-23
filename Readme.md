@@ -5,7 +5,7 @@ A small python script which can find and download all links from a website
 
 Usage
 -----
-```bash
+```
 ./fetch-links.py -h
 usage: fetch-links.py [-h] [-d DIRECTORY] [-v] [-l] [--nodownload] url include
 
