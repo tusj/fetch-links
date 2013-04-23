@@ -6,13 +6,13 @@
 from BeautifulSoup import BeautifulSoup
 import urllib
 import urllib2
-import re
 import sys
 import os.path
 import os
 import pprocess
 import time
 import argparse
+
 import re
 from fish import ProgressFish
 
@@ -27,8 +27,6 @@ restring = "|".join(tt)
 regexObj = re.compile(restring)
 
 dirname = os.path.basename(args.url.strip('/'))
-
-
 if not os.path.exists(dirname):
 	os.mkdir(dirname)
 else:
@@ -51,6 +49,8 @@ n = len(links)
 nSize = len(str(n))
 fish = ProgressFish(total=n)
 
+fetchParallel = results.manage(pprocess.MakeParallel(fetchLink))
+
 for link in links:
 	i += 1
 	fish.animate(amount=i)
@@ -59,8 +59,13 @@ for link in links:
 	#sys.stdout.flush()
 	if str(l)[-1] == '/':
 		continue
-	fetchLink(link)
+	fetchParallel(link)
+
+
+results = pprocess.Map(limit=limit)
+for res in results:
+	print res
+
 
 print 'fetched {} links into directory {}\n'.format(n, dirname)
 print 'time used: {} seconds'.format(round(time.time() - tic, 2))
-
