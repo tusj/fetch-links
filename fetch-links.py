@@ -21,8 +21,8 @@ maxParallelRequests = 24
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
-parser.add_argument("include", help="list include patterns here\nExample: include pdf: .*\.pdf")
-parser.add_argument("-d", "--directory", help="specify a directory to store the links in")
+parser.add_argument("include", help="List include patterns here\nExample: include pdf, doc and everything which contains hello in the file name: .*\.pdf .*\.doc .*hello.*")
+parser.add_argument("-d", "--directory", help="Specify a directory to store the links in")
 parser.add_argument("-v", "--verbose", help="Increase program output", action="store_true")
 parser.add_argument("-l", "--list", help="Print out a list of the URL's found", action="store_true")
 parser.add_argument("--nodownload", help="Skip Downloading, implies --list option", action="store_true")
