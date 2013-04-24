@@ -12,12 +12,10 @@ import os
 import pprocess
 import time
 import argparse
-
 import re
 from fish import ProgressFish
 
 maxParallelRequests = 24
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
@@ -70,11 +68,13 @@ def fetchLink(link):
 	l = link.get('href')
 	if l == os.path.basename(l):
 		l = args.url
-	urllib.urlretrieve(l, os.path.basename(link.get('href')))
+	fileName = urllib2.unquote(os.path.basename(link.get('href')))
+	urllib.urlretrieve(l, fileName)
 
 if args.nodownload or args.list or args.verbose:
+	ordnum = 15
 	for l in links:
-		print l.get('href')
+		print urllib2.unquote(l.get('href'))
 	if args.nodownload:
 		sys.exit(0)
 
