@@ -34,9 +34,13 @@ restring = ".+\..+"
 if args.include:
 	t = args.include.split(" ")
 	restring = ".+\.(" + "|".join(t) + ")"
-
-print restring
-fileTypeFilter = re.compile(restring)
+if args.regex:
+	restring = args.include
+try:
+	fileTypeFilter = re.compile(restring)
+except re.error as e:
+	print "Error for regular expression \"{}\": {}".format(restring, e.message)
+	sys.exit(1)
 
 if not args.url.startswith("http://"):
 	print "error: The URL given needs to be complete"
