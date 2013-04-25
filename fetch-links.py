@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # Fetches data files from given link as argument.
-# TODO: Add test for url check.
 # Currently skips subdirectories.
 
 from BeautifulSoup import BeautifulSoup
@@ -17,6 +16,7 @@ from fish import ProgressFish
 
 maxParallelRequests = 24
 
+# Add command line arguments and options and parse
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Fetches all links from url given")
 parser.add_argument("-i", "--include", help="List include patterns here\nExample: include pdf and doc: \"pdf doc\"")
@@ -28,20 +28,19 @@ parser.add_argument("-n", "--nodownload", help="Skip Downloading, implies --list
 
 args = parser.parse_args()
 
+# Create regular expression pattern
+fileTypeFilter = None
 restring = ".+\..+"
 if args.include:
 	t = args.include.split(" ")
 	restring = ".+\.(" + "|".join(t) + ")"
-if args.regex:
+elif args.regex:
 	restring = args.include
+
 try:
 	fileTypeFilter = re.compile(restring)
 except re.error as e:
 	print "Error for regular expression \"{}\": {}".format(restring, e.message)
-	sys.exit(1)
-
-if not args.url.startswith("http://"):
-	print "error: The URL given needs to be complete"
 	sys.exit(1)
 
 def makedir(dirname):
@@ -49,7 +48,8 @@ def makedir(dirname):
 		os.makedirs(dirname)
 		return True
 
-dirname = ""
+# Set the directory to save to
+dirname = None
 if args.directory:
 	dirname = args.directory
 	makedir(dirname)
@@ -60,10 +60,20 @@ else:
 		makedir(dirname)
 
 os.chdir(dirname)
-html_page = urllib2.urlopen(args.url)
+
+# Get the HTML page
+html_page = None
+try:
+	html_page = urllib2.urlopen(args.url)
+except urllib2.HTTPError as e:
+	print "error on opening \"{}\":\t{}".format(e.filename, e)
+	sys.exit(1)
+
+# Parse HTML and find all <a href="filter"> matches
 soup = BeautifulSoup(html_page)
 links = soup.findAll(name='a', attrs={'href': fileTypeFilter})
 
+# Download link
 def fetchLink(link):
 	l = link.get('href')
 	if l == os.path.basename(l):
@@ -71,7 +81,8 @@ def fetchLink(link):
 	fileName = urllib2.unquote(os.path.basename(link.get('href')))
 	urllib.urlretrieve(l, fileName)
 
-if args.nodownload or args.list or args.verbose:
+# Print list of files found
+if args.nodownload or args.list:
 	ordnum = 15
 	for l in links:
 		print urllib2.unquote(l.get('href'))
@@ -83,12 +94,15 @@ tic = time.time()
 n = len(links)
 nSize = len(str(n))
 
+# Create parallel wrapper function
 results = pprocess.Map(limit=min(n, maxParallelRequests))
 fetchParallel = results.manage(pprocess.MakeParallel(fetchLink))
 
+# Call parallel
 for link in links:
 	fetchParallel(link)
 
+# Print progress and directory information
 if args.verbose:
 	fish = ProgressFish(total=n)
 	print
