@@ -3,7 +3,6 @@
 # Currently skips subdirectories.
 
 from BeautifulSoup import BeautifulSoup
-import urllib
 import urllib2
 import sys
 import os.path
@@ -30,11 +29,14 @@ args = parser.parse_args()
 
 # Create regular expression pattern
 fileTypeFilter = None
+
+# Default regex: Search for every file with a file type
 restring = ".+\..+"
+
 if args.include:
 	t = args.include.split(" ")
 	restring = ".+\.(" + "|".join(t) + ")"
-elif args.regex:
+if args.regex:
 	restring = args.include
 
 try:
@@ -42,6 +44,16 @@ try:
 except re.error as e:
 	print "Error for regular expression \"{}\": {}".format(restring, e.message)
 	sys.exit(1)
+
+if args.url[-1] != '/':
+	args.url += '/'
+
+def vPrint(*o):
+	if args.verbose:
+		for i in o:
+			print i,
+		print
+
 
 def makedir(dirname):
 	if not os.path.exists(dirname):
@@ -73,17 +85,33 @@ except urllib2.HTTPError as e:
 soup = BeautifulSoup(html_page)
 links = soup.findAll(name='a', attrs={'href': fileTypeFilter})
 
-# Download link
+if len(links) == 0:
+	vPrint("No matching files for pattern \"{}\" found".format(restring))
+	sys.exit(0)
+
+# Download link, return size of object in bytes
 def fetchLink(link):
 	l = link.get('href')
 	if l == os.path.basename(l):
-		l = args.url
+		l = args.url + l
 	fileName = urllib2.unquote(os.path.basename(link.get('href')))
-	urllib.urlretrieve(l, fileName)
+	try:
+		resp = urllib2.urlopen(l)
+	except urllib2.HTTPError as e:
+		vprint("error for fetching {}: {}".format(l, e))
+	except ValueError:
+		vprint("invalid url: {}".format(l))
+	else:
+		try:
+			f = open(fileName, "w")
+			f.write(resp.read())
+			f.close()
+			return os.path.getsize(fileName)
+		except IOerror as e:
+			vprint("error on saving {} as {}: {}".format(l, fileName, e))
 
 # Print list of files found
 if args.nodownload or args.list:
-	ordnum = 15
 	for l in links:
 		print urllib2.unquote(l.get('href'))
 	if args.nodownload:
@@ -103,12 +131,20 @@ for link in links:
 	fetchParallel(link)
 
 # Print progress and directory information
+def fmtSize(num):
+    for x in ['B','kB','MB','GB']:
+        if num < 1000.0:
+            return "%3.1f%s" % (num, x)
+        num /= 1000.0
+    return "{} {}".format(num, 'TB')
+
 if args.verbose:
 	fish = ProgressFish(total=n)
 	print
-	for i, res in enumerate(results):
+	tSize = 0
+	for i, fSize in enumerate(results):
 		fish.animate(amount=i+1)
-
+		tSize += fSize
 	if not args.directory:
 		print 'fetched {} links into directory {}\n'.format(n, dirname)
-	print 'time used: {} seconds'.format(round(time.time() - tic, 2))
+	print '{} seconds\t {}'.format(round(time.time() - tic, 2), fmtSize(tSize))
